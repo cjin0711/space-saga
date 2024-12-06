@@ -193,7 +193,6 @@ void process_input()
     }
 
     if (key_state[SDL_SCANCODE_C]) {
-        OutputDebugString(L"C KEY BEING PRESSEDDDDDDDDDDDDDDDDDDD\n");
         g_current_scene->g_state.player->fireball();
         Mix_PlayChannel(-1, g_current_scene->g_state.jump_sfx, 0);
 

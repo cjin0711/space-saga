@@ -6,9 +6,9 @@
 #include "Map.h"
 #include <windows.h>
 
-enum EntityType { PLATFORM, PLAYER, ENEMY, PLAYERBEAM, ENEMYBEAM, MISSILE };
-enum AIType     { ASTEROID, SPACECRAFT, MOTHERSHIP  };
-enum AIState    { FLYING, STATIONARY, DODGING, BOSS };
+enum EntityType { PLATFORM, PLAYER, ENEMY, PLAYERBEAM, ENEMYBEAM, HOMING};
+enum AIType     { ASTEROID, SPACECRAFT, MOTHERSHIP, MISSILE};
+enum AIState    { FLYING, STATIONARY, DODGING, BOSSIDLE, BOSSONE, BOSSTWO };
 
 
 enum AnimationDirection { LEFT, RIGHT, UP, DOWN };
@@ -22,8 +22,8 @@ private:
     bool m_lose_life = false;
     bool m_killed_enemy = false;
     bool m_hit_enemy = false;
-    bool m_enemy_shooting = false;
     int m_enemy_health = 100;
+    bool m_missile_launch = false;
 
     bool m_touched_enemy = false;
     int kill_count = 0;
@@ -107,12 +107,13 @@ public:
     void ai_activate(Entity *player);
     void ai_fly();
     void ai_guard(Entity *player);
+	void ai_boss(Entity* player);
+	void ai_home(Entity* player);
     
     void normalise_movement() { m_movement = glm::normalize(m_movement); }
 
 
     void fireball() { 
-        OutputDebugString(L"FIREBALL FUNCTION CALLEDDDDDDDDDD!\n");
         set_shooting(true);
     }
 
@@ -160,8 +161,7 @@ public:
     bool      const get_hit_enemy() const { return m_hit_enemy; }
     int       const get_enemy_health() const { return m_enemy_health; }
     glm::vec3 const get_start_position()     const { return m_start_position; }
-	bool 	  const get_enemy_shooting() const { return m_enemy_shooting; }
-
+	bool      const get_missile_launch() const { return m_missile_launch; }
 
     
     void activate()   { m_is_active = true;  };
@@ -197,7 +197,7 @@ public:
     void const set_hit_enemy() { m_hit_enemy = true; }
     void const set_enemy_health(int num) { m_enemy_health = num; }
 	void const set_start_position(glm::vec3 new_start_position) { m_start_position = new_start_position; }
-	void const set_enemy_shooting() { m_enemy_shooting = true; }
+	void const set_missile_launch() { m_missile_launch = true; }
 
     // Setter for m_walking
     void set_walking(int walking[3][4])

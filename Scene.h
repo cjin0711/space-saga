@@ -28,6 +28,7 @@ struct GameState
 	Entity* player_beams;
     Entity* enemy_one_beams;
     Entity* enemy_two_beams;
+    Entity* enemy_missile;
 
 
     Mix_Music* music;

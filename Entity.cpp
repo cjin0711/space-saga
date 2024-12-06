@@ -31,8 +31,13 @@ void Entity::ai_activate(Entity* player)
         break;
 
     case MOTHERSHIP:
-        ai_guard(player);
+        ai_boss(player);
         break;
+
+	case MISSILE:
+        OutputDebugString(L"MISSILE ACTIVATIONNNNNNNNNNNNNNNNNNN\n");
+        ai_home(player);
+		break;
 
     default:
         break;
@@ -50,75 +55,111 @@ void Entity::ai_fly()
 
 void Entity::ai_guard(Entity* player)
 {
-
     switch (m_ai_state) {
 
-    case FLYING:
-        break;
+        case FLYING:
+            break;
 
-    case STATIONARY:
+        case STATIONARY:
+            // Top Enemy
+            if (m_position.y > -1.75f) {
+                m_movement = glm::vec3(0.0f, -0.5f, 0.0f);
+            }
+            if (m_position.y < -2.45f && m_position.y > -2.5f) {
+                m_movement = glm::vec3(0.0f, 0.5f, 0.0f);
+            }
 
-        set_enemy_shooting();
-        // Top Enemy
-        if (m_position.y > -1.75f) {
-            m_movement = glm::vec3(0.0f, -0.5f, 0.0f);
-        }
-        if (m_position.y < -2.45f && m_position.y > -2.5f) {
-            m_movement = glm::vec3(0.0f, 0.5f, 0.0f);
-        }
+            // Bottom Enemy
+            if (m_position.y > -3.75f && m_position.y < -3.7) {
+                m_movement = glm::vec3(0.0f, -0.5f, 0.0f);
+            }
+            if (m_position.y < -4.5f) {
+                m_movement = glm::vec3(0.0f, 0.5f, 0.0f);
+            }
 
-        // Bottom Enemy
-        if (m_position.y > -3.75f && m_position.y < -3.7) {
-            m_movement = glm::vec3(0.0f, -0.5f, 0.0f);
-        }
-        if (m_position.y < -4.5f) {
-            m_movement = glm::vec3(0.0f, 0.5f, 0.0f);
-        }
+            // If below 40, move to second stage
+            if (m_enemy_health < 40) {
+                m_movement = glm::vec3(0.0f, 2.0f, 0.0f);
+                m_ai_state = DODGING;
+            }
 
+            break;
 
-        if (m_enemy_health < 40) {
-            m_movement = glm::vec3(0.0f, 2.0f, 0.0f);
-            m_ai_state = DODGING;
-        }
+        case DODGING:
+            if (m_position.y > -1.25f) {
+                m_movement = glm::vec3(0.0f, -2.0f, 0.0f);
+            }
+            if (m_position.y < -4.75f) {
+                m_movement = glm::vec3(0.0f, 2.0f, 0.0f);
+            }
+            break;
 
-        break;
-
-    case DODGING:
-        set_enemy_shooting();
-
-        if (m_position.y > -1.25f) {
-            m_movement = glm::vec3(0.0f, -2.0f, 0.0f);
-        }
-        if (m_position.y < -4.75f) {
-            m_movement = glm::vec3(0.0f, 2.0f, 0.0f);
-        }
-        break;
-
-    case BOSS:
-        // conditional checking if enemy and player are same height
-        //if (fabs(m_position.y - player->get_position().y) < 2.0f && fabs(m_position.x - player->get_position().x) < 4.0f) {
-        //    if ((m_position.x > player->get_position().x && m_position.x < 8.25f) || m_position.x > 8.25f) {
-        //        m_movement = glm::vec3(-1.0f, 0.0f, 0.0f);
-        //    }
-        //    else if (m_position.x < player->get_position().x && m_position.x < 8.25f) {
-        //        m_movement = glm::vec3(1.0f, 0.0f, 0.0f);
-        //    }
-        //}
-        //else {
-
-        //    if (m_position.x > 8.25f) {
-        //        m_movement = glm::vec3(-1.2f, 0.0f, 0.0f);
-        //    }
-        //}
-        //if (m_position.x > 8.25f) {
-        //    m_movement = glm::vec3(-1.2f, 0.0f, 0.0f);
-        //}
-        break;
-
-    default:
-        break;
+        default:
+            break;
     }
 }
+
+
+void Entity::ai_boss(Entity* player) {
+    switch (m_ai_state) {
+
+        case BOSSIDLE:
+            m_movement = glm::vec3(0.0f, 0.5f, 0.0f);
+            m_ai_state = BOSSONE;
+            break;
+
+        case BOSSONE:
+            if ( m_position.y > -2.9f) {
+                m_movement = glm::vec3(0.0f, -0.3f, 0.0f);
+            }
+            if (m_position.y < -3.1) {
+                m_movement = glm::vec3(0.0f, 0.3f, 0.0f);
+            }
+
+            if (m_enemy_health < 50) {
+
+				m_ai_state = BOSSTWO;
+            }
+            break;
+
+        case BOSSTWO:
+            if (m_position.y > -2.0f) {
+                m_movement = glm::vec3(0.0f, -0.6f, 0.0f);
+            }
+            if (m_position.y < -4.0) {
+                m_movement = glm::vec3(0.0f, 0.6f, 0.0f);
+            }
+            set_missile_launch();
+            break;
+    }
+}
+
+void Entity::ai_home(Entity* player) {
+    if (m_position.x > player->get_position().x) {
+        m_movement.x = -0.5f;  // Move left
+    }
+    else if (m_position.x < player->get_position().x) {
+        m_movement.x = 0.5f;   // Move right
+    }
+    else {
+        m_movement.x = 0.0f;   // Stop horizontal movement
+    }
+
+    // Move towards player's y coordinate
+    if (m_position.y > player->get_position().y) {
+        m_movement.y = -0.25f;  // Move down
+    }
+    else if (m_position.y < player->get_position().y) {
+        m_movement.y = 0.25f;   // Move up
+    }
+    else {
+        m_movement.y = 0.0f;   // Stop vertical movement
+    }
+}
+
+
+
+
 // Default constructor
 Entity::Entity()
     : m_position(0.0f), m_movement(0.0f), m_scale(1.0f, 1.0f, 0.0f), m_model_matrix(1.0f),
@@ -295,21 +336,35 @@ void const Entity::check_collision_y(Entity* collidable_entities, int collidable
             }
             float y_distance = fabs(m_position.y - collidable_entity->m_position.y);
             float y_overlap = fabs(y_distance - (m_height / 2.0f) - (collidable_entity->m_height / 2.0f));
-            if (m_velocity.y > 0)
-            {
-                m_position.y -= y_overlap;
-                m_velocity.y = 0;
+            
+            // FOR MISSILE COLLISIONS
+            if (m_entity_type == ENEMY && collidable_entity->m_entity_type == PLAYER) {
+                if (m_velocity.y > 0)
+                {
+                    m_position.y -= y_overlap;
+                    m_velocity.y = 0;
 
-                // Collision!
-                m_collided_top = true;
-            }
-            else if (m_velocity.y < 0)
-            {
-                m_position.y += y_overlap;
-                m_velocity.y = 0;
+                    // Collision!
+                    m_collided_top = true;
+                }
+                else if (m_velocity.y < 0)
+                {
+                    m_position.y += y_overlap;
+                    m_velocity.y = 0;
 
-                // Collision!
-                m_collided_bottom = true;
+                    // Collision!
+                    m_collided_bottom = true;
+                }
+                // Always handle player-enemy collision the same way
+                if (player->get_num_lives() == 1) {
+                    player->set_touched();
+                    collidable_entity->set_movement(glm::vec3(0.0f, 0.0f, 0.0f));
+                }
+                else {
+                    player->m_position = player->get_start_position();
+                    this->deactivate();
+                    player->set_lose_life();
+                }
             }
             if (m_collided_bottom) {
                 if (m_entity_type == PLAYER) {
@@ -386,14 +441,20 @@ void const Entity::check_collision_x(Entity* collidable_entities, int collidable
                     player->set_lose_life();
                 }
             }
+            // player shooting enemy
             else if (m_entity_type == PLAYERBEAM && collidable_entity->m_entity_type == ENEMY) {
                 collidable_entity->set_hit_enemy();
                 this->deactivate();
-                //collidable_entity->set_enemy_number(i);
+            }
+            // player shooting missile
+            else if (m_entity_type == HOMING && collidable_entity->m_entity_type == PLAYERBEAM) {
+                this->deactivate();
+                collidable_entity->deactivate();
             }
 
-            // FOR WHEN ENEMY PROJECTILE HITS PLAYER
-            else if (m_entity_type == ENEMYBEAM && collidable_entity->m_entity_type == PLAYER) {
+
+            // enemy shooting player
+            else if (m_entity_type == HOMING || m_entity_type == ENEMYBEAM && collidable_entity->m_entity_type == PLAYER) {
                 // Always handle player-enemy collision the same way
                 if (player->get_num_lives() == 1) {
                     player->set_touched();
@@ -509,14 +570,13 @@ void Entity::update(float delta_time, Entity* player, Entity* collidable_entitie
     m_lose_life = false;
     m_killed_enemy = false;
     m_hit_enemy = false;
-	m_enemy_shooting = false;
 
     m_collided_top = false;
     m_collided_bottom = false;
     m_collided_left = false;
     m_collided_right = false;
 
-    if (m_entity_type == ENEMY) {
+    if (m_entity_type == ENEMY || m_entity_type == HOMING) {
         ai_activate(player);
     }
 
