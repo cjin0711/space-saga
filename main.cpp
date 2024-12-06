@@ -177,7 +177,7 @@ void process_input()
                 Mix_PlayMusic(g_current_scene->g_state.music, -1);
 
             case SDLK_RETURN:
-				switch_to_scene(g_level_c);
+				switch_to_scene(g_level_a);
                 break;
 
             default:

@@ -35,7 +35,6 @@ void Entity::ai_activate(Entity* player)
         break;
 
 	case MISSILE:
-        OutputDebugString(L"MISSILE ACTIVATIONNNNNNNNNNNNNNNNNNN\n");
         ai_home(player);
 		break;
 
@@ -135,6 +134,12 @@ void Entity::ai_boss(Entity* player) {
 }
 
 void Entity::ai_home(Entity* player) {
+
+    // To keep missile out of site while not BOSSTWO
+    if (m_position.y < 2.0f && m_position.y > 1.5f) {
+        m_position.y = 1.75f;
+    }
+
     if (m_position.x > player->get_position().x) {
         m_movement.x = -0.5f;  // Move left
     }
@@ -219,22 +224,13 @@ const char* entityTypeToString(EntityType type) {
 
 
 
-Entity::Entity(GLuint texture_id, float speed, float width, float height, EntityType EntityType, AIType AIType, AIState AIState) : m_position(0.0f), m_movement(0.0f), m_scale(1.0f, 1.0f, 0.0f), m_model_matrix(1.0f),
+Entity::Entity(GLuint texture_id, float speed, float width, float height, EntityType EntityType, AIType AIType, AIState AIState) : m_position(5.0f), m_movement(0.0f), m_scale(1.0f, 1.0f, 0.0f), m_model_matrix(1.0f),
 m_speed(speed), m_animation_cols(0), m_animation_frames(0), m_animation_index(0),
 m_animation_rows(0), m_animation_indices(nullptr), m_animation_time(0.0f),
 m_texture_id(texture_id), m_velocity(0.0f), m_acceleration(0.0f), m_width(width), m_height(height), m_entity_type(EntityType), m_ai_type(AIType), m_ai_state(AIState), m_idle(), m_is_jumping(false), m_jumping_power(5.0f)
 {
-    // Initialize m_walking with zeros or any default value
-    //for (int i = 0; i < SECONDS_PER_FRAME; ++i)
-    //    for (int j = 0; j < SECONDS_PER_FRAME; ++j) m_walking[i][j] = 0;
-
-    OutputDebugString(L"MAKING AN ENEMYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY\n");
-
-    //const char* entityTypeStr = entityTypeToString(m_entity_type);
-    //std::wstring wideString(entityTypeStr, entityTypeStr + strlen(entityTypeStr));
-    //OutputDebugString(L"Entity type: ");
-    //OutputDebugString(wideString.c_str());
-    //OutputDebugString(L"\n");
+    m_position.x = -10.0f;
+    m_position.y = 10.0f;
 
     std::wstring speeds = std::to_wstring(m_speed);
     OutputDebugString(L"ENTITY SPEED ");

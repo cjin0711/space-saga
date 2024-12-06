@@ -1,5 +1,5 @@
 #include "Scene.h"
-int num_lives = 5;
+int num_lives = 7;
 //float enemy_one_health = 100;
 //float enemy_two_health = 100;
 float boss_health = 100;

@@ -35,6 +35,7 @@ struct GameState
     Mix_Chunk* jump_sfx;
     Mix_Chunk* lose_life_sfx;
     Mix_Chunk* enemy_death_sfx;
+	Mix_Chunk* missile_launch_sfx;
 
     int next_scene_id;
 };

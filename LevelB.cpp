@@ -51,6 +51,9 @@ void LevelB::initialise()
     m_spaceship_one_beam_timer = 0.0f;
     m_spaceship_two_beam_timer = 0.0f;
 
+    m_start_delay = 5.0f; // Delay duration in seconds
+    m_delay_complete = false; // Flag to indicate if the delay is over
+
     // ----- PLAYER ----- //
     GLuint player_texture_id = Utility::load_texture(SPRITESHEET_FILEPATH);
 
@@ -92,6 +95,8 @@ void LevelB::initialise()
         0.25f,                      // height
         ENEMYBEAM                    // entity type
     );
+    g_state.enemy_one_beams->set_position(glm::vec3(-10.0f, 10.0f, 0.0f));
+
 
     g_state.enemy_two_beams = new Entity(
         enemy_beams_texture_id,        // texture id
@@ -100,7 +105,7 @@ void LevelB::initialise()
         0.25f,                      // height
         ENEMYBEAM                    // entity type
     );
-
+    g_state.enemy_two_beams->set_position(glm::vec3(-10.0f, 10.0f, 0.0f));
 
     // ----- ENEMY: SPACECRAFT (Count: 2) ----- //
     GLuint space_craft_texture_id = Utility::load_texture("assets/enemyCraft.png");
@@ -179,6 +184,34 @@ void LevelB::shoot_enemy_two_beams() {
 
 void LevelB::update(float delta_time)
 {
+
+    g_state.player->update(delta_time, g_state.player, g_state.enemies, ENEMY_COUNT, g_state.map);
+
+    for (int i = 0; i < ENEMY_COUNT; i++) {
+        g_state.enemies[i].update(delta_time, g_state.player, g_state.player, 1, g_state.map);
+    }
+
+    if (g_state.player_beams->get_is_active()) {
+        g_state.player_beams->update(delta_time, g_state.player, g_state.enemies, ENEMY_COUNT, g_state.map);
+    }
+    if (g_state.enemy_one_beams->get_is_active()) {
+        g_state.enemy_one_beams->update(delta_time, g_state.player, g_state.player, 1, g_state.map);
+    }
+    if (g_state.enemy_two_beams->get_is_active()) {
+        g_state.enemy_two_beams->update(delta_time, g_state.player, g_state.player, 1, g_state.map);
+    }
+
+    // 3 Second Initial Delay
+    if (!m_delay_complete) {
+        m_start_delay -= delta_time; // Reduce the delay timer
+
+
+        if (m_start_delay <= 0.0f) {
+            m_delay_complete = true; // Mark the delay as complete
+        }
+        return; // Skip further updates until delay is over
+    }
+
     m_spaceship_one_beam_timer += delta_time;
     m_spaceship_two_beam_timer += delta_time;
 
@@ -214,18 +247,6 @@ void LevelB::update(float delta_time)
         kill_count++;
     }
 
-    g_state.player->update(delta_time, g_state.player, g_state.enemies, ENEMY_COUNT, g_state.map);
-
-    if (g_state.player_beams->get_is_active()) {
-        g_state.player_beams->update(delta_time, g_state.player, g_state.enemies, ENEMY_COUNT, g_state.map);
-    }
-    if (g_state.enemy_one_beams->get_is_active()) {
-        g_state.enemy_one_beams->update(delta_time, g_state.player, g_state.player, 1, g_state.map);
-    }
-    if (g_state.enemy_two_beams->get_is_active()) {
-        g_state.enemy_two_beams->update(delta_time, g_state.player, g_state.player, 1, g_state.map);
-    }
-
     for (int i = 0; i < ENEMY_COUNT; i++)
     {
         // workaround to stop death sfx from playing indefinitely
@@ -242,13 +263,13 @@ void LevelB::update(float delta_time)
 		// health deduction & damage logic
         if (g_state.enemies[i].get_hit_enemy()) {
 			if (i == 0) {
-                g_state.enemies[0].set_enemy_health(g_state.enemies[0].get_enemy_health() - 18);
+                g_state.enemies[0].set_enemy_health(g_state.enemies[0].get_enemy_health() - 13);
 			}
 			else if (i == 1) { 
-                g_state.enemies[1].set_enemy_health(g_state.enemies[1].get_enemy_health() - 18);
+                g_state.enemies[1].set_enemy_health(g_state.enemies[1].get_enemy_health() - 13);
             }
         }
-        g_state.enemies[i].update(delta_time, g_state.player, g_state.player, 1, g_state.map);
+        //g_state.enemies[i].update(delta_time, g_state.player, g_state.player, 1, g_state.map);
     }
 
     if (g_state.player->get_killed_enemy()) {
@@ -285,20 +306,33 @@ void LevelB::render(ShaderProgram* g_shader_program)
 
     if (g_state.player) {
         g_state.player->render(g_shader_program);
+
+        // Level 2 Intro
+        if (!m_delay_complete) {
+            Utility::draw_text(g_shader_program, g_font_texture_id_B, "LEVEL 2: SPACE SHENANIGANS", 0.3f, 0.0001f,
+                glm::vec3(1.5, -3.0, 0.0f));
+        }
     
+
+        // Level 1 Complete
+        if (passed_levelB) {
+            Utility::draw_text(g_shader_program, g_font_texture_id_B, "LEVEL 2 COMPLETE", 0.35f, 0.0001f,
+                glm::vec3(2.5, -2.5, 0.0f));
+            Utility::draw_text(g_shader_program, g_font_texture_id_B, "Press Space to Continue", 0.3f, 0.0001f,
+                glm::vec3(2.0, -3.5, 0.0f));
+        }
 
         if (num_lives >= 1) {
             Utility::draw_text(g_shader_program, g_font_texture_id_B, "Lives:" + std::to_string(num_lives), 0.2f, 0.0001f,
                 glm::vec3(g_state.player->get_position().x - 0.65f, g_state.player->get_position().y + 1.0f, 0.0f));
         }
 
-
-        if (g_state.enemies[0].get_is_active()) {
+        if (g_state.enemies[0].get_is_active() && m_delay_complete) {
             Utility::draw_text(g_shader_program, g_font_texture_id_B, std::to_string(g_state.enemies[0].get_enemy_health()) + "%", 0.2f, 0.0001f,
                 glm::vec3(g_state.enemies[0].get_position().x, g_state.enemies[0].get_position().y + 1.0f, 0.0f));
         }
 
-        if (g_state.enemies[1].get_is_active()) {
+        if (g_state.enemies[1].get_is_active() && m_delay_complete) {
             Utility::draw_text(g_shader_program, g_font_texture_id_B, std::to_string(g_state.enemies[1].get_enemy_health()) + "%", 0.2f, 0.0001f,
                 glm::vec3(g_state.enemies[1].get_position().x, g_state.enemies[1].get_position().y + 1.0f, 0.0f));
         }

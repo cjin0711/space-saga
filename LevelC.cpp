@@ -48,6 +48,9 @@ void LevelC::initialise()
     m_spaceship_two_beam_timer = 0.0f;
     m_missile_timer = 0.0f;
 
+    m_start_delay = 5.0f; // Delay duration in seconds
+    m_delay_complete = false; // Flag to indicate if the delay is over
+
     // ----- PLAYER ----- //
     GLuint player_texture_id = Utility::load_texture(SPRITESHEET_FILEPATH);
 
@@ -89,6 +92,7 @@ void LevelC::initialise()
         0.25f,                      // height
         ENEMYBEAM                    // entity type
     );
+    g_state.enemy_one_beams->set_position(glm::vec3(-10.0f, 10.0f, 0.0f));
 
     g_state.enemy_two_beams = new Entity(
         enemy_beams_texture_id,        // texture id
@@ -97,19 +101,7 @@ void LevelC::initialise()
         0.25f,                      // height
         ENEMYBEAM                    // entity type
     );
-
-    // ----- ENEMY MISSILE ----- //
-    GLuint enemy_missile_texture_id = Utility::load_texture("assets/missile.png");
-
-    g_state.enemy_missile = new Entity(
-        enemy_missile_texture_id,        // texture id
-        3.0f,                       // speed
-        0.75f,                      // width
-        0.25f,                      // height
-        HOMING,                       // entity type
-        MISSILE,                    // AI type
-        FLYING					   // initial AI state
-    );
+    g_state.enemy_two_beams->set_position(glm::vec3(-10.0f, 10.0f, 0.0f));
 
     // ----- ENEMY: MOTHERSHIP (Count: 1) ----- //
     GLuint boss_texture_id = Utility::load_texture("assets/bossCraft.png");
@@ -131,6 +123,21 @@ void LevelC::initialise()
 
     g_state.enemies[0].set_position(glm::vec3(8.1f, -3.0f, 0.0f));
 
+    // ----- ENEMY MISSILE ----- //
+    GLuint enemy_missile_texture_id = Utility::load_texture("assets/missile.png");
+
+    g_state.enemy_missile = new Entity(
+        enemy_missile_texture_id,        // texture id
+        3.0f,                       // speed
+        0.75f,                      // width
+        0.25f,                      // height
+        HOMING,                       // entity type
+        MISSILE,                    // AI type
+        FLYING					   // initial AI state
+    );
+
+    g_state.enemy_missile->set_position(glm::vec3(0.0f, 1.75f, 0.0f));
+
     // ----- BACKGROUND MUSIC ----- //
     Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096);
     g_state.music = Mix_LoadMUS("assets/wave_three_music.mp3");
@@ -143,6 +150,7 @@ void LevelC::initialise()
     g_state.jump_sfx = Mix_LoadWAV("assets/playerBeamShoot.wav");
     g_state.lose_life_sfx = Mix_LoadWAV("assets/lose-life.wav");
     g_state.enemy_death_sfx = Mix_LoadWAV("assets/enemy_explosion.wav");
+    g_state.missile_launch_sfx = Mix_LoadWAV("assets/missile_launch.wav");
 }
 
 void LevelC::shoot_player_beams() {
@@ -205,6 +213,33 @@ void LevelC::shoot_enemy_missile() {
 
 void LevelC::update(float delta_time)
 {
+    g_state.player->update(delta_time, g_state.player, g_state.enemies, ENEMY_COUNT, g_state.map);
+
+    if (g_state.player_beams->get_is_active()) {
+        g_state.player_beams->update(delta_time, g_state.player, g_state.enemies, ENEMY_COUNT, g_state.map);
+    }
+    if (g_state.enemy_one_beams->get_is_active()) {
+        g_state.enemy_one_beams->update(delta_time, g_state.player, g_state.player, 1, g_state.map);
+    }
+    if (g_state.enemy_two_beams->get_is_active()) {
+        g_state.enemy_two_beams->update(delta_time, g_state.player, g_state.player, 1, g_state.map);
+    }
+    if (g_state.enemy_missile->get_is_active()) {
+        // to check with collisions with player or player beam
+        g_state.enemy_missile->update(delta_time, g_state.player, g_state.player, 1, g_state.map);
+        g_state.enemy_missile->update(delta_time, g_state.player, g_state.player_beams, 1, g_state.map);
+    }
+
+    // 3 Second Initial Delay
+    if (!m_delay_complete) {
+        m_start_delay -= delta_time; // Reduce the delay timer
+
+
+        if (m_start_delay <= 0.0f) {
+            m_delay_complete = true; // Mark the delay as complete
+        }
+        return; // Skip further updates until delay is over
+    }
 
     m_spaceship_one_beam_timer += delta_time;
     m_spaceship_two_beam_timer += delta_time;
@@ -224,6 +259,7 @@ void LevelC::update(float delta_time)
     if (g_state.enemies[0].get_missile_launch()) {
 		m_missile_timer += delta_time;
         if (m_missile_timer >= 4.0f && g_state.enemies[0].get_is_active()) {
+            Mix_PlayChannel(-1, g_state.missile_launch_sfx, 0);
             shoot_enemy_missile();
 			m_missile_timer = 0.0f;
         }
@@ -244,27 +280,25 @@ void LevelC::update(float delta_time)
         kill_count++;
     }
 
-    g_state.player->update(delta_time, g_state.player, g_state.enemies, ENEMY_COUNT, g_state.map);
-
     // SHOOTING LOGIC
     if (g_state.player->get_shooting()) {
         shoot_player_beams();
     }
 
-    if (g_state.player_beams->get_is_active()) {
-        g_state.player_beams->update(delta_time, g_state.player, g_state.enemies, ENEMY_COUNT, g_state.map);
-    }
-    if (g_state.enemy_one_beams->get_is_active()) {
-        g_state.enemy_one_beams->update(delta_time, g_state.player, g_state.player, 1, g_state.map);
-    }
-    if (g_state.enemy_two_beams->get_is_active()) {
-        g_state.enemy_two_beams->update(delta_time, g_state.player, g_state.player, 1, g_state.map);
-    }
-    if (g_state.enemy_missile->get_is_active()) {
-        // to check with collisions with player or player beam
-        g_state.enemy_missile->update(delta_time, g_state.player, g_state.player, 1, g_state.map);
-		g_state.enemy_missile->update(delta_time, g_state.player, g_state.player_beams, 1, g_state.map);
-    }
+    //if (g_state.player_beams->get_is_active()) {
+    //    g_state.player_beams->update(delta_time, g_state.player, g_state.enemies, ENEMY_COUNT, g_state.map);
+    //}
+    //if (g_state.enemy_one_beams->get_is_active()) {
+    //    g_state.enemy_one_beams->update(delta_time, g_state.player, g_state.player, 1, g_state.map);
+    //}
+    //if (g_state.enemy_two_beams->get_is_active()) {
+    //    g_state.enemy_two_beams->update(delta_time, g_state.player, g_state.player, 1, g_state.map);
+    //}
+    //if (g_state.enemy_missile->get_is_active()) {
+    //    // to check with collisions with player or player beam
+    //    g_state.enemy_missile->update(delta_time, g_state.player, g_state.player, 1, g_state.map);
+    //    g_state.enemy_missile->update(delta_time, g_state.player, g_state.player_beams, 1, g_state.map);
+    //}
 
     for (int i = 0; i < ENEMY_COUNT; i++)
     {
@@ -318,14 +352,19 @@ void LevelC::render(ShaderProgram* g_shader_program)
     if (g_state.player) {
         g_state.player->render(g_shader_program);
 
+        if (!m_delay_complete) {
+            Utility::draw_text(g_shader_program, g_font_texture_id_C, "LEVEL 3: CAPTAIN KIRK", 0.3f, 0.0001f,
+                glm::vec3(1.5, -3.0, 0.0f));
+        }
+
         if (num_lives >= 1) {
             Utility::draw_text(g_shader_program, g_font_texture_id_C, "Lives:" + std::to_string(num_lives), 0.2f, 0.0001f,
                 glm::vec3(g_state.player->get_position().x - 0.65f, g_state.player->get_position().y + 1.0f, 0.0f));
         }
 
-        if (g_state.enemies[0].get_is_active()) {
+        if (g_state.enemies[0].get_is_active() && m_delay_complete) {
             Utility::draw_text(g_shader_program, g_font_texture_id_C, std::to_string(g_state.enemies[0].get_enemy_health()) + "%", 0.2f, 0.0001f,
-                glm::vec3(g_state.enemies[0].get_position().x, g_state.enemies[0].get_position().y + 1.0f, 0.0f));
+                glm::vec3(g_state.enemies[0].get_position().x, g_state.enemies[0].get_position().y + 2.0f, 0.0f));
         }
         
         // Conditional Win / Lose Text
